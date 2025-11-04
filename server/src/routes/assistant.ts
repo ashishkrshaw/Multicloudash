@@ -54,6 +54,14 @@ const validateMessageAlternation = (messages: AssistantMessage[]): boolean => {
 
 assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
   try {
+    // Check if AI_API_KEY is configured
+    const apiKey = process.env.AI_API_KEY;
+    if (!apiKey || apiKey === '' || apiKey === 'pplx-your-api-key-here') {
+      return res.status(503).json({ 
+        error: "AI Assistant is not configured. Please set AI_API_KEY in your environment variables. Get your API key from https://www.perplexity.ai/settings/api" 
+      });
+    }
+
     const messages = req.body?.messages;
     if (!isAssistantMessageArray(messages)) {
       return res.status(400).json({ error: "messages must be an array of { role, content }" });

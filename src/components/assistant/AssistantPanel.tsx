@@ -74,38 +74,64 @@ export const AssistantPanel = ({ open, onOpenChange }: AssistantPanelProps) => {
 
   const mutation = useMutation<ChatResponse, Error, ChatPayload>({
     mutationFn: async (payload) => {
-      const response = await fetch("/api/assistant/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      let response: Response;
+      try {
+        response = await fetch("/api/assistant/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (fetchError) {
+        throw new Error("Failed to connect to the server. Please check your internet connection.");
+      }
+
+      // Always read response as text first
+      let responseText = "";
+      try {
+        responseText = await response.text();
+      } catch (readError) {
+        throw new Error("Failed to read server response.");
+      }
 
       if (!response.ok) {
-        // Try to parse error response, fallback to text if JSON parsing fails
+        // Try to parse error response
         let errorMessage = response.statusText || "Assistant request failed";
         try {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const body = await response.json();
-            errorMessage = typeof body.error === "string" ? body.error : errorMessage;
-          } else {
-            // Response is not JSON, try to read as text
-            const text = await response.text();
-            errorMessage = text || errorMessage;
+          if (responseText.trim()) {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const body = JSON.parse(responseText);
+              errorMessage = typeof body.error === "string" ? body.error : errorMessage;
+            } else {
+              // Not JSON, use text as-is
+              errorMessage = responseText.trim();
+            }
           }
         } catch (parseError) {
-          // If parsing fails, use the status text
+          // If parsing fails, use what we have
           console.error("Failed to parse error response:", parseError);
+          errorMessage = responseText.substring(0, 200) || errorMessage;
         }
         throw new Error(errorMessage);
       }
 
       // Parse successful response
       try {
-        return (await response.json()) as ChatResponse;
+        if (!responseText.trim()) {
+          throw new Error("Server returned an empty response.");
+        }
+        
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server did not return JSON. Received: " + responseText.substring(0, 100));
+        }
+        
+        return JSON.parse(responseText) as ChatResponse;
       } catch (jsonError) {
+        console.error("Failed to parse success response:", jsonError);
+        console.error("Response text:", responseText.substring(0, 500));
         throw new Error("Failed to parse assistant response. The server may be experiencing issues.");
       }
     },

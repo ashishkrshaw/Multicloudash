@@ -338,50 +338,53 @@ Remember: Short, sharp, helpful. No fluff.`;
       body: JSON.stringify(payload),
     });
 
+    // Read response text first to handle empty responses
+    const responseText = await response.text();
+
     if (!response.ok) {
       let detail = `HTTP ${response.status}`;
       try {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errorText = await response.text();
-          if (errorText.trim()) {
-            const parsed = JSON.parse(errorText) as { error?: { message?: string; type?: string } };
-            if (parsed?.error) {
-              const message = parsed.error.message ?? parsed.error.type ?? "";
-              if (parsed.error.type === "invalid_model") {
-                detail = message || "Invalid model";
-                throw new InvalidModelError(model, detail.trim());
-              }
-              if (message) {
-                detail = message;
-              }
+        if (responseText.trim()) {
+          const parsed = JSON.parse(responseText) as { error?: { message?: string; type?: string } };
+          if (parsed?.error) {
+            const message = parsed.error.message ?? parsed.error.type ?? "";
+            if (parsed.error.type === "invalid_model") {
+              detail = message || "Invalid model";
+              throw new InvalidModelError(model, detail.trim());
             }
-          } else {
-            detail = "Empty response from API";
+            if (message) {
+              detail = message;
+            }
           }
         } else {
-          const text = await response.text();
-          detail = text.trim() || detail;
+          detail = "Empty response from API";
         }
       } catch (error) {
         if (error instanceof InvalidModelError) {
           throw error;
         }
-        // If JSON parsing fails, use the detail we have
+        // If JSON parsing fails, use the text we have
         console.error("Failed to parse Perplexity error response:", error);
+        detail = responseText.substring(0, 200) || detail;
       }
       throw new Error(`Perplexity API request failed: ${detail}`);
     }
 
+    // Parse successful response
     let data;
     try {
-      data = (await response.json()) as {
+      if (!responseText.trim()) {
+        throw new Error("Perplexity API returned empty response");
+      }
+      data = JSON.parse(responseText) as {
         id?: string;
         model?: string;
         choices?: Array<{ message?: { content?: string }; text?: string }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
       };
     } catch (jsonError) {
+      console.error("Failed to parse Perplexity response:", jsonError);
+      console.error("Response text:", responseText.substring(0, 500));
       throw new Error("Perplexity API returned invalid JSON response");
     }
 
