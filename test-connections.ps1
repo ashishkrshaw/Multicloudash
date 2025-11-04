@@ -63,7 +63,7 @@ if (Test-Endpoint -Name "Health Endpoint" -Url "$baseUrl/api/health") { $testsPa
 Write-Host "`n2. Database Connection" -ForegroundColor Yellow
 Write-Host "─────────────────────────────────" -ForegroundColor Gray
 Write-Host "   Database: Neon PostgreSQL" -ForegroundColor Gray
-Write-Host "   Connection: $($env:DATABASE_URL -ne $null)" -ForegroundColor Gray
+Write-Host "   Connection: $($null -ne $env:DATABASE_URL)" -ForegroundColor Gray
 if ($env:DATABASE_URL) {
     Write-Host "   ✓ Database URL configured" -ForegroundColor Green
     $testsPassed++
