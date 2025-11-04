@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - stores authenticated users
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  provider      String   // 'google' or 'cognito'
+  providerId    String   @unique // Google sub or Cognito sub
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  credentials   Credential?
+  chatMessages  ChatMessage[]
+  cacheEntries  CacheEntry[]
+
+  @@index([email])
+  @@index([providerId])
+}
+
+// Encrypted credentials per user
+model Credential {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Encrypted credential data (base64 encoded)
+  awsEncrypted    String?  @db.Text
+  azureEncrypted  String?  @db.Text
+  gcpEncrypted    String?  @db.Text
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Cache for cloud API responses
+model CacheEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider   String   // 'aws', 'azure', 'gcp'
+  dataType   String   // 'ec2-instances', 's3-buckets', etc.
+  data       Json     // Cached response data
+  
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, provider, dataType])
+  @@index([userId, provider])
+  @@index([expiresAt])
+}
+
+// AI Chat history
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  role      String   // 'user' or 'assistant'
+  content   String   @db.Text
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// Daily refresh tracking
+model RefreshLog {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String   // 'aws', 'azure', 'gcp'
+  
+  refreshedAt DateTime @default(now())
+
+  @@unique([userId, provider, refreshedAt])
+  @@index([userId, provider])
+}
+

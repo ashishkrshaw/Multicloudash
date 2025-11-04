@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 228 59% 7%;
+    --foreground: 210 40% 96%;
+
+    --card: 227 47% 13%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 227 47% 13%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 28 96% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 227 35% 18%;
+    --secondary-foreground: 210 40% 94%;
+
+    --muted: 227 32% 24%;
+    --muted-foreground: 214 20% 70%;
+
+    --accent: 198 89% 60%;
+    --accent-foreground: 0 0% 8%;
+
+    --destructive: 355 74% 53%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 227 35% 26%;
+    --input: 227 35% 26%;
+    --ring: 28 96% 56%;
+
+    --aws: 28 96% 56%;
+    --aws-foreground: 0 0% 100%;
+
+    --azure: 207 100% 45%;
+    --azure-foreground: 0 0% 100%;
+
+    --gcp: 214 89% 58%;
+    --gcp-foreground: 0 0% 100%;
+
+    --success: 142 60% 45%;
+    --success-foreground: 0 0% 10%;
+
+    --warning: 38 94% 56%;
+    --warning-foreground: 0 0% 12%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 227 45% 10%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 28 96% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 226 40% 18%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 227 35% 28%;
+    --sidebar-ring: 28 96% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(circle at 20% 20%, hsl(216 100% 16% / 0.45), transparent 55%),
+      radial-gradient(circle at 80% 0%, hsl(280 70% 20% / 0.45), transparent 55%),
+      linear-gradient(160deg, hsl(228 60% 6%), hsl(226 62% 10%));
+    min-height: 100vh;
+  }
+}
