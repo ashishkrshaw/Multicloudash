@@ -51,9 +51,14 @@ export async function signUpWithCognito(
     ],
   };
 
-  // Add name if provided
+  // Add name and name.formatted if provided (Cognito requires name.formatted if schema has it)
   if (name) {
     requestBody.UserAttributes.push({ Name: 'name', Value: name });
+    requestBody.UserAttributes.push({ Name: 'name.formatted', Value: name });
+  } else {
+    // If no name provided, use username as fallback to satisfy schema requirement
+    requestBody.UserAttributes.push({ Name: 'name', Value: username });
+    requestBody.UserAttributes.push({ Name: 'name.formatted', Value: username });
   }
 
   // Add SECRET_HASH if client secret is configured

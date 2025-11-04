@@ -39,6 +39,7 @@ server/.env.production
 *.sln
 *.sw?
 
-# Documentation (ignore all markdown files except README.md)
+# Documentation (ignore all markdown files except README.md and AUTH_FIXES.md)
 *.md
 !README.md
+!AUTH_FIXES.md
