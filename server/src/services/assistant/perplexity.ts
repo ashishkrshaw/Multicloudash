@@ -339,35 +339,51 @@ Remember: Short, sharp, helpful. No fluff.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      let detail = errorText;
+      let detail = `HTTP ${response.status}`;
       try {
-        const parsed = JSON.parse(errorText) as { error?: { message?: string; type?: string } };
-        if (parsed?.error) {
-          const message = parsed.error.message ?? parsed.error.type ?? "";
-          if (parsed.error.type === "invalid_model") {
-            detail = message || "Invalid model";
-            throw new InvalidModelError(model, detail.trim());
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorText = await response.text();
+          if (errorText.trim()) {
+            const parsed = JSON.parse(errorText) as { error?: { message?: string; type?: string } };
+            if (parsed?.error) {
+              const message = parsed.error.message ?? parsed.error.type ?? "";
+              if (parsed.error.type === "invalid_model") {
+                detail = message || "Invalid model";
+                throw new InvalidModelError(model, detail.trim());
+              }
+              if (message) {
+                detail = message;
+              }
+            }
+          } else {
+            detail = "Empty response from API";
           }
-          if (message) {
-            detail = message;
-          }
+        } else {
+          const text = await response.text();
+          detail = text.trim() || detail;
         }
       } catch (error) {
         if (error instanceof InvalidModelError) {
           throw error;
         }
-        // ignore JSON parse errors and fall back to raw text detail
+        // If JSON parsing fails, use the detail we have
+        console.error("Failed to parse Perplexity error response:", error);
       }
-      throw new Error(`Perplexity API request failed with status ${response.status}: ${detail}`);
+      throw new Error(`Perplexity API request failed: ${detail}`);
     }
 
-    const data = (await response.json()) as {
-      id?: string;
-      model?: string;
-      choices?: Array<{ message?: { content?: string }; text?: string }>;
-      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-    };
+    let data;
+    try {
+      data = (await response.json()) as {
+        id?: string;
+        model?: string;
+        choices?: Array<{ message?: { content?: string }; text?: string }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+      };
+    } catch (jsonError) {
+      throw new Error("Perplexity API returned invalid JSON response");
+    }
 
     const choice = data.choices?.[0];
     const reply = choice?.message?.content ?? choice?.text;

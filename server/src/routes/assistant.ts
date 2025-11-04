@@ -71,7 +71,18 @@ assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
     }));
 
     const snapshot = await buildAssistantSnapshot();
-    const completion = await generateAssistantResponse(trimmedMessages, snapshot);
+    
+    let completion;
+    try {
+      completion = await generateAssistantResponse(trimmedMessages, snapshot);
+    } catch (aiError) {
+      // Handle AI API errors gracefully
+      const errorMessage = aiError instanceof Error ? aiError.message : "AI service unavailable";
+      console.error('[Assistant] AI generation failed:', errorMessage);
+      return res.status(503).json({ 
+        error: `Unable to generate response: ${errorMessage}. Please check AI_API_KEY configuration.` 
+      });
+    }
 
     // Store chat history if user is authenticated
     if (req.userId) {
@@ -97,7 +108,10 @@ assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
       snapshotGeneratedAt: snapshot.generatedAt,
     });
   } catch (error) {
-    next(error);
+    // Ensure we always return JSON even for unexpected errors
+    console.error('[Assistant] Unexpected error:', error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return res.status(500).json({ error: errorMessage });
   }
 });
 

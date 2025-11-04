@@ -19,34 +19,26 @@
 
 ---
 
-### 2. ✅ Cognito "name.formatted is required" Error
-**Problem:** Sign-up failed with error: `Attributes did not conform to the schema: name.formatted: The attribute name.formatted is required`
+### 2. ✅ Cognito "name.formatted" Schema Error
+**Problem:** Sign-up failed with error: `Attributes did not conform to the schema: The attribute name.formatted is not defined in schema.`
 
-**Root Cause:** Your AWS Cognito User Pool is configured to REQUIRE the `name.formatted` attribute (this is a non-standard custom attribute that was added to the schema). The sign-up code was only sending `name`, not `name.formatted`.
+**Root Cause:** The code was trying to send a `name.formatted` attribute which is NOT a standard Cognito attribute and was not defined in your User Pool schema. Only standard attributes like `name`, `email`, `preferred_username` should be sent.
 
 **Solution:**
-Updated `src/lib/auth/cognito.ts` to send BOTH `name` AND `name.formatted` attributes:
+Updated `src/lib/auth/cognito.ts` to send ONLY standard attributes:
 ```typescript
-// Always provide name.formatted to satisfy schema requirement
-if (name) {
-  requestBody.UserAttributes.push({ Name: 'name', Value: name });
-  requestBody.UserAttributes.push({ Name: 'name.formatted', Value: name });
-} else {
-  // Use username as fallback if no name provided
-  requestBody.UserAttributes.push({ Name: 'name', Value: username });
-  requestBody.UserAttributes.push({ Name: 'name.formatted', Value: username });
-}
+UserAttributes: [
+  { Name: 'email', Value: email },
+  { Name: 'preferred_username', Value: username },
+  { Name: 'name', Value: name }, // Only if provided
+]
 ```
 
-**Alternative Fix (Cognito Console):**
-If you want to remove the `name.formatted` requirement:
-1. Go to AWS Cognito Console
-2. Select your User Pool: `us-east-1_O1I34XnkL`
-3. Go to "Sign-up experience" → "Required attributes"
-4. Remove `name.formatted` from required attributes
-5. Note: This may not be possible if users already exist with this attribute
+**Removed:**
+- ❌ `name.formatted` (not a standard attribute)
+- ❌ Fallback logic that added non-existent attributes
 
-**Status:** ✅ Fixed in code to work with current schema
+**Status:** ✅ Fixed - only sends standard Cognito attributes
 
 ---
 

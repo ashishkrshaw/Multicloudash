@@ -83,12 +83,31 @@ export const AssistantPanel = ({ open, onOpenChange }: AssistantPanelProps) => {
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const message = typeof body.error === "string" ? body.error : response.statusText;
-        throw new Error(message || "Assistant request failed");
+        // Try to parse error response, fallback to text if JSON parsing fails
+        let errorMessage = response.statusText || "Assistant request failed";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const body = await response.json();
+            errorMessage = typeof body.error === "string" ? body.error : errorMessage;
+          } else {
+            // Response is not JSON, try to read as text
+            const text = await response.text();
+            errorMessage = text || errorMessage;
+          }
+        } catch (parseError) {
+          // If parsing fails, use the status text
+          console.error("Failed to parse error response:", parseError);
+        }
+        throw new Error(errorMessage);
       }
 
-      return (await response.json()) as ChatResponse;
+      // Parse successful response
+      try {
+        return (await response.json()) as ChatResponse;
+      } catch (jsonError) {
+        throw new Error("Failed to parse assistant response. The server may be experiencing issues.");
+      }
     },
   });
 
