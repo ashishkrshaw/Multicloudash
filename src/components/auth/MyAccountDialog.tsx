@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Chrome, AlertCircle } from "lucide-react";
+import { Loader2, Mail, AlertCircle } from "lucide-react";
+import { GoogleIcon } from "@/components/ui/google-icon";
 
 interface MyAccountDialogProps {
   open: boolean;
@@ -221,18 +222,18 @@ export const MyAccountDialog = ({ open, onOpenChange }: MyAccountDialogProps) =>
             <Button
               onClick={handleGoogleSignIn}
               variant="outline"
-              className="w-full gap-2"
+              className="w-full gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Redirecting...
                 </>
               ) : (
                 <>
-                  <Chrome className="h-4 w-4" />
-                  Sign in with Google
+                  <GoogleIcon className="h-5 w-5" />
+                  <span className="font-medium">Sign in with Google</span>
                 </>
               )}
             </Button>
@@ -443,15 +444,18 @@ export const MyAccountDialog = ({ open, onOpenChange }: MyAccountDialogProps) =>
             <Button
               onClick={handleGoogleSignIn}
               variant="outline"
-              className="w-full gap-2"
+              className="w-full gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors"
               disabled={isLoading || awaitingVerification}
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Redirecting...
+                </>
               ) : (
                 <>
-                  <Chrome className="h-4 w-4" />
-                  Sign up with Google
+                  <GoogleIcon className="h-5 w-5" />
+                  <span className="font-medium">Sign up with Google</span>
                 </>
               )}
             </Button>

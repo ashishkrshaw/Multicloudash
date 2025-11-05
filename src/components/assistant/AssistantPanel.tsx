@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Send, Sparkles } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import {
   Sheet,
   SheetContent,
@@ -76,11 +77,8 @@ export const AssistantPanel = ({ open, onOpenChange }: AssistantPanelProps) => {
     mutationFn: async (payload) => {
       let response: Response;
       try {
-        response = await fetch("/api/assistant/chat", {
+        response = await apiFetch('/api/assistant/chat', {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify(payload),
         });
       } catch (fetchError) {

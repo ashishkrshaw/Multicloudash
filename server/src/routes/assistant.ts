@@ -185,12 +185,21 @@ assistantRouter.get("/health", async (req, res) => {
   const apiKey = process.env.AI_API_KEY;
   const apiConfigured = apiKey && apiKey !== '' && apiKey !== 'pplx-your-api-key-here';
   
+  // Log for debugging
+  console.log('[Assistant Health] API Key present:', !!apiKey);
+  console.log('[Assistant Health] API Key length:', apiKey ? apiKey.length : 0);
+  console.log('[Assistant Health] API Key prefix:', apiKey ? apiKey.substring(0, 8) + '...' : 'NONE');
+  
   return res.json({
     status: 'ok',
     service: 'assistant',
     aiConfigured: apiConfigured,
+    apiKeyPresent: !!apiKey,
+    apiKeyLength: apiKey ? apiKey.length : 0,
+    apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'NOT_SET',
     endpoints: ['/chat', '/history'],
-    mode: 'development'
+    mode: 'development',
+    timestamp: new Date().toISOString()
   });
 });
 
