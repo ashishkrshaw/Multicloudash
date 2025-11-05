@@ -15,8 +15,10 @@ export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   message: 'Too many requests from this IP, please try again later',
-  standardHeaders: true,
+  standardHeaders: 'draft-7', // Use draft-7 for RateLimit-* headers
   legacyHeaders: false,
+  // Skip failed requests to avoid rate limiting on errors
+  skipFailedRequests: true,
 });
 
 /**
@@ -27,8 +29,9 @@ export const credentialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: 'Too many credential requests, please try again later',
-  standardHeaders: true,
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skipFailedRequests: true,
 });
 
 /**
@@ -39,8 +42,9 @@ export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: 'Too many authentication attempts, please try again later',
-  standardHeaders: true,
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skipFailedRequests: false, // Count failed auth attempts
 });
 
 /**

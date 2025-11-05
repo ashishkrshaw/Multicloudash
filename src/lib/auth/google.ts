@@ -15,6 +15,22 @@ export interface GoogleUser {
   verified_email: boolean;
 }
 
+/**
+ * Get the appropriate redirect URI based on environment
+ */
+function getRedirectUri(): string {
+  // Check if we're in production (deployed)
+  const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  
+  if (isProduction) {
+    // Use the current origin + callback path for production
+    return `${window.location.origin}/auth/callback/google`;
+  }
+  
+  // Use configured redirect URI for development
+  return import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback/google`;
+}
+
 // Generate PKCE code verifier and challenge
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
@@ -53,7 +69,11 @@ function clearCodeVerifier() {
  */
 export async function initiateGoogleSignIn(): Promise<void> {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+  const redirectUri = getRedirectUri();
+
+  console.log('[GoogleAuth] Initiating sign-in');
+  console.log('[GoogleAuth] Client ID:', clientId ? 'present' : 'missing');
+  console.log('[GoogleAuth] Redirect URI:', redirectUri);
 
   if (!clientId || clientId.includes('placeholder')) {
     throw new Error('Google OAuth not configured. Please set VITE_GOOGLE_CLIENT_ID in .env');
@@ -76,6 +96,7 @@ export async function initiateGoogleSignIn(): Promise<void> {
     prompt: 'consent',
   });
 
+  console.log('[GoogleAuth] Redirecting to Google...');
   // Redirect to Google
   window.location.href = `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`;
 }
@@ -85,8 +106,13 @@ export async function initiateGoogleSignIn(): Promise<void> {
  */
 export async function handleGoogleCallback(code: string): Promise<GoogleUser> {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+  const redirectUri = getRedirectUri();
   const codeVerifier = getCodeVerifier();
+
+  console.log('[GoogleAuth] Processing callback');
+  console.log('[GoogleAuth] Code present:', code ? 'yes' : 'no');
+  console.log('[GoogleAuth] Code verifier present:', codeVerifier ? 'yes' : 'no');
+  console.log('[GoogleAuth] Redirect URI:', redirectUri);
 
   if (!codeVerifier) {
     throw new Error('Code verifier not found. Please restart sign-in flow.');
@@ -110,10 +136,12 @@ export async function handleGoogleCallback(code: string): Promise<GoogleUser> {
 
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
+      console.error('[GoogleAuth] Token exchange failed:', error);
       throw new Error(`Token exchange failed: ${error}`);
     }
 
     const tokens = await tokenResponse.json();
+    console.log('[GoogleAuth] Tokens received successfully');
     
     // Store tokens
     localStorage.setItem('google_access_token', tokens.access_token);
@@ -134,6 +162,7 @@ export async function handleGoogleCallback(code: string): Promise<GoogleUser> {
     }
 
     const user = await userResponse.json();
+    console.log('[GoogleAuth] User info retrieved:', user.email);
     
     // Clean up PKCE verifier
     clearCodeVerifier();
@@ -147,6 +176,7 @@ export async function handleGoogleCallback(code: string): Promise<GoogleUser> {
     };
   } catch (error) {
     clearCodeVerifier();
+    console.error('[GoogleAuth] Callback handling failed:', error);
     throw error;
   }
 }

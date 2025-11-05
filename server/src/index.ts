@@ -13,6 +13,10 @@ import { optionalAuth } from "./middleware/auth.js";
 
 const app = express();
 
+// Trust proxy - CRITICAL for Render deployment
+// This allows Express to properly handle X-Forwarded-For headers from the Render proxy
+app.set('trust proxy', 1);
+
 // Security middleware (must be first)
 app.use(corsOptions);
 app.use(securityHeaders);

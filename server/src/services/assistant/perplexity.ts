@@ -266,6 +266,10 @@ export const generateAssistantResponse = async (
     throw new Error("AI_API_KEY is not configured");
   }
 
+  console.log('[Perplexity] Generating response with model:', process.env.AI_MODEL || 'sonar-pro');
+  console.log('[Perplexity] API URL:', API_URL);
+  console.log('[Perplexity] API Key present:', apiKey ? 'Yes (length: ' + apiKey.length + ')' : 'No');
+
   const systemPrompt = `You are CloudCTRL Copilot, a sharp cloud FinOps expert. Keep it brief and punchy.
 
 **Your style:**
@@ -307,6 +311,8 @@ Remember: Short, sharp, helpful. No fluff.`;
   const invalidModelMessages: string[] = [];
 
   const callPerplexity = async (model: string): Promise<AssistantCompletion> => {
+    console.log('[Perplexity] Attempting call with model:', model);
+    
     // Check if the user is asking about their specific infrastructure
     const userMessages = messages.filter((msg) => msg.role === "user");
     const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
@@ -329,17 +335,40 @@ Remember: Short, sharp, helpful. No fluff.`;
       ],
     };
 
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
+    console.log('[Perplexity] Request payload:', JSON.stringify({
+      model: payload.model,
+      temperature: payload.temperature,
+      max_tokens: payload.max_tokens,
+      disable_search: payload.disable_search,
+      message_count: payload.messages.length
+    }));
+
+    let response;
+    try {
+      response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (fetchError) {
+      console.error('[Perplexity] Fetch error:', fetchError);
+      throw new Error(`Failed to connect to Perplexity API: ${fetchError instanceof Error ? fetchError.message : 'Network error'}`);
+    }
+
+    console.log('[Perplexity] Response status:', response.status);
+    console.log('[Perplexity] Response headers:', Object.fromEntries(response.headers.entries()));
 
     // Read response text first to handle empty responses
     const responseText = await response.text();
+    console.log('[Perplexity] Response text length:', responseText.length);
+    if (responseText.length > 0) {
+      console.log('[Perplexity] Response text preview:', responseText.substring(0, 200));
+    } else {
+      console.error('[Perplexity] WARNING: Received empty response from API');
+    }
 
     if (!response.ok) {
       let detail = `HTTP ${response.status}`;
@@ -357,14 +386,15 @@ Remember: Short, sharp, helpful. No fluff.`;
             }
           }
         } else {
-          detail = "Empty response from API";
+          detail = "Perplexity API returned an empty error response";
+          console.error('[Perplexity] Empty error response body');
         }
       } catch (error) {
         if (error instanceof InvalidModelError) {
           throw error;
         }
         // If JSON parsing fails, use the text we have
-        console.error("Failed to parse Perplexity error response:", error);
+        console.error("[Perplexity] Failed to parse error response:", error);
         detail = responseText.substring(0, 200) || detail;
       }
       throw new Error(`Perplexity API request failed: ${detail}`);
@@ -374,7 +404,8 @@ Remember: Short, sharp, helpful. No fluff.`;
     let data;
     try {
       if (!responseText.trim()) {
-        throw new Error("Perplexity API returned empty response");
+        console.error('[Perplexity] Empty success response - this should not happen');
+        throw new Error("Perplexity API returned an empty success response. This may indicate an API key issue or rate limiting.");
       }
       data = JSON.parse(responseText) as {
         id?: string;
@@ -383,16 +414,17 @@ Remember: Short, sharp, helpful. No fluff.`;
         usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
       };
     } catch (jsonError) {
-      console.error("Failed to parse Perplexity response:", jsonError);
-      console.error("Response text:", responseText.substring(0, 500));
-      throw new Error("Perplexity API returned invalid JSON response");
+      console.error("[Perplexity] Failed to parse success response:", jsonError);
+      console.error("[Perplexity] Response text:", responseText.substring(0, 500));
+      throw new Error("Perplexity API returned invalid JSON. The API may be experiencing issues.");
     }
 
     const choice = data.choices?.[0];
     const reply = choice?.message?.content ?? choice?.text;
 
-    if (!reply) {
-      throw new Error("Perplexity API returned no response content.");
+    if (!reply || reply.trim() === '') {
+      console.error('[Perplexity] No content in response:', JSON.stringify(data, null, 2));
+      throw new Error("Perplexity API returned no response content. This may indicate an API issue.");
     }
 
     // Clean up the response - remove citation markers and extra whitespace

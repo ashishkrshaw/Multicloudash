@@ -22,4 +22,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  publicDir: "public", // Explicitly set public directory
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+  },
 }));

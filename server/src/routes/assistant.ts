@@ -52,13 +52,17 @@ const validateMessageAlternation = (messages: AssistantMessage[]): boolean => {
   return true;
 };
 
-assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
+assistantRouter.post("/chat", optionalAuth, async (req, res) => {
+  // Set JSON content type immediately
+  res.setHeader('Content-Type', 'application/json');
+  
   try {
     // Check if AI_API_KEY is configured
     const apiKey = process.env.AI_API_KEY;
     if (!apiKey || apiKey === '' || apiKey === 'pplx-your-api-key-here') {
+      console.log('[Assistant] AI_API_KEY not configured');
       return res.status(503).json({ 
-        error: "AI Assistant is not configured. Please set AI_API_KEY in your environment variables. Get your API key from https://www.perplexity.ai/settings/api" 
+        error: "AI Assistant is not configured. Please add AI_API_KEY environment variable in Render dashboard. Get your key from https://www.perplexity.ai/settings/api" 
       });
     }
 
@@ -78,7 +82,15 @@ assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
       content: message.content.slice(0, 4000),
     }));
 
-    const snapshot = await buildAssistantSnapshot();
+    let snapshot;
+    try {
+      snapshot = await buildAssistantSnapshot();
+    } catch (snapshotError) {
+      console.error('[Assistant] Failed to build snapshot:', snapshotError);
+      return res.status(500).json({ 
+        error: "Failed to gather cloud data for context. Please try again." 
+      });
+    }
     
     let completion;
     try {
@@ -88,7 +100,7 @@ assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
       const errorMessage = aiError instanceof Error ? aiError.message : "AI service unavailable";
       console.error('[Assistant] AI generation failed:', errorMessage);
       return res.status(503).json({ 
-        error: `Unable to generate response: ${errorMessage}. Please check AI_API_KEY configuration.` 
+        error: `Unable to generate response: ${errorMessage}` 
       });
     }
 
@@ -109,7 +121,7 @@ assistantRouter.post("/chat", optionalAuth, async (req, res, next) => {
       }
     }
 
-    res.json({
+    return res.status(200).json({
       reply: completion.reply,
       model: completion.model,
       usage: completion.usage,
