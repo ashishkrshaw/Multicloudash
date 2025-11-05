@@ -17,6 +17,12 @@ export interface AssistantCompletion {
   };
 }
 
+// Lightweight snapshot for development mode
+export interface SimpleSnapshot {
+  generatedAt: string;
+  contextSummary: string;
+}
+
 const API_URL = process.env.AI_API_URL ?? "https://api.perplexity.ai/chat/completions";
 const FALLBACK_MODELS = ["sonar-pro"] as const;
 const DEFAULT_PAYLOAD = {
@@ -242,7 +248,13 @@ const summariseGcpBlock = (gcp: AssistantSnapshot["gcp"]): string | null => {
 - ${lines.join("\n- ")}`;
 };
 
-const summariseSnapshot = (snapshot: AssistantSnapshot): string => {
+const summariseSnapshot = (snapshot: AssistantSnapshot | SimpleSnapshot): string => {
+  // Handle simple snapshot (development mode)
+  if ('contextSummary' in snapshot) {
+    return `${snapshot.contextSummary}\n\nSnapshot generated at ${snapshot.generatedAt}`;
+  }
+  
+  // Handle full snapshot (production mode)
   const blocks: Array<string | null> = [
     summariseOverviewBlock(snapshot),
     summariseAwsBlock(snapshot),
@@ -259,7 +271,7 @@ const summariseSnapshot = (snapshot: AssistantSnapshot): string => {
 
 export const generateAssistantResponse = async (
   messages: AssistantMessage[],
-  snapshot: AssistantSnapshot,
+  snapshot: AssistantSnapshot | SimpleSnapshot,
 ): Promise<AssistantCompletion> => {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) {

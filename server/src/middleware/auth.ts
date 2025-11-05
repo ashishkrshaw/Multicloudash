@@ -8,6 +8,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { upsertUser } from '../utils/userManager.js';
 
+// Simple in-memory cache to prevent repeated DB writes
+const userCache = new Map<string, { userId: string; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Extend Express Request to include user info
 declare global {
   namespace Express {
@@ -17,6 +21,37 @@ declare global {
       authProvider?: 'google' | 'cognito';
     }
   }
+}
+
+/**
+ * Get or create user with caching to reduce DB calls
+ */
+async function getOrCreateUser(
+  providerId: string,
+  email: string,
+  name: string | undefined,
+  provider: 'google' | 'cognito'
+): Promise<string> {
+  const cacheKey = `${provider}:${providerId}`;
+  const cached = userCache.get(cacheKey);
+  
+  // Return cached userId if still valid
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.userId;
+  }
+  
+  // Create/update user in database
+  const userId = await upsertUser({
+    email,
+    name,
+    provider,
+    providerId,
+  });
+  
+  // Cache the result
+  userCache.set(cacheKey, { userId, timestamp: Date.now() });
+  
+  return userId;
 }
 
 /**
@@ -114,19 +149,18 @@ export async function authenticateUser(
     // Try Google token first
     let userInfo = await verifyGoogleToken(token);
     if (userInfo) {
-      // Create/update user in database
-      const userId = await upsertUser({
-        email: userInfo.email,
-        name: userInfo.name,
-        provider: 'google',
-        providerId: userInfo.providerId,
-      });
+      // Create/update user in database (with caching)
+      const userId = await getOrCreateUser(
+        userInfo.providerId,
+        userInfo.email,
+        userInfo.name,
+        'google'
+      );
 
       req.userId = userId;
       req.userEmail = userInfo.email;
       req.authProvider = 'google';
       
-      console.log(`[Auth] Google user authenticated: ${userInfo.email}`);
       next();
       return;
     }
@@ -134,19 +168,18 @@ export async function authenticateUser(
     // Try Cognito token
     userInfo = await verifyCognitoToken(token);
     if (userInfo) {
-      // Create/update user in database
-      const userId = await upsertUser({
-        email: userInfo.email,
-        name: userInfo.name,
-        provider: 'cognito',
-        providerId: userInfo.providerId,
-      });
+      // Create/update user in database (with caching)
+      const userId = await getOrCreateUser(
+        userInfo.providerId,
+        userInfo.email,
+        userInfo.name,
+        'cognito'
+      );
 
       req.userId = userId;
       req.userEmail = userInfo.email;
       req.authProvider = 'cognito';
       
-      console.log(`[Auth] Cognito user authenticated: ${userInfo.email}`);
       next();
       return;
     }
@@ -180,13 +213,13 @@ export async function optionalAuth(
     
     let userInfo = await verifyGoogleToken(token);
     if (userInfo) {
-      // Create/update user in database
-      const userId = await upsertUser({
-        email: userInfo.email,
-        name: userInfo.name,
-        provider: 'google',
-        providerId: userInfo.providerId,
-      });
+      // Create/update user in database (with caching)
+      const userId = await getOrCreateUser(
+        userInfo.providerId,
+        userInfo.email,
+        userInfo.name,
+        'google'
+      );
 
       req.userId = userId;
       req.userEmail = userInfo.email;
@@ -194,13 +227,13 @@ export async function optionalAuth(
     } else {
       userInfo = await verifyCognitoToken(token);
       if (userInfo) {
-        // Create/update user in database
-        const userId = await upsertUser({
-          email: userInfo.email,
-          name: userInfo.name,
-          provider: 'cognito',
-          providerId: userInfo.providerId,
-        });
+        // Create/update user in database (with caching)
+        const userId = await getOrCreateUser(
+          userInfo.providerId,
+          userInfo.email,
+          userInfo.name,
+          'cognito'
+        );
 
         req.userId = userId;
         req.userEmail = userInfo.email;

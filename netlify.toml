@@ -1,8 +1,8 @@
-# Netlify Configuration for CloudCTRL
+# Netlify Configuration for CloudCTRL Frontend
 
 [build]
   # Build command
-  command = "npm run build:dev"
+  command = "npm run build"
   # Directory with the static files
   publish = "dist"
 
@@ -12,10 +12,13 @@
   to = "/index.html"
   status = 200
 
-# Development environment variables (override in Netlify UI for production)
+# Production environment variables
 [context.production.environment]
-  NODE_ENV = "development"
-  VITE_API_URL = "https://your-backend.onrender.com"
+  NODE_ENV = "production"
+  VITE_API_URL = "https://multiclouddash.onrender.com"
+  VITE_GOOGLE_CLIENT_ID = "331703679009-7i3mdu35najtdgsg2bjolofnbk2ns6pm.apps.googleusercontent.com"
+  VITE_GOOGLE_REDIRECT_URI = "https://multicloud-management-dashboard.onrender.com/auth/callback/google"
 
 [context.deploy-preview.environment]
   NODE_ENV = "development"
+  VITE_API_URL = "https://multiclouddash.onrender.com"

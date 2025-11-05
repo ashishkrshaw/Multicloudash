@@ -7,35 +7,43 @@ services:
     runtime: node
     region: oregon
     plan: free
-    buildCommand: cd server && npm install && npm run build
-    startCommand: cd server && npm run start
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
-        value: development
+        value: production
       - key: PORT
         value: 4000
       - key: AI_API_KEY
         sync: false
       - key: AI_MODEL
         value: sonar-pro
+      - key: FRONTEND_URL
+        value: https://multicloud-management-dashboard.onrender.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false
     healthCheckPath: /api/health
 
-  # Frontend Static Site
-  - type: web
-    name: cloudctrl-frontend
-    runtime: static
-    region: oregon
-    plan: free
-    buildCommand: npm install && npm run build:dev
-    staticPublishPath: ./dist
-    envVars:
-      - key: NODE_ENV
-        value: development
-      - key: VITE_API_URL
-        value: https://cloudctrl-api.onrender.com
-      - key: VITE_GOOGLE_CLIENT_ID
-        sync: false
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+  # Frontend Static Site (separate deployment)
+  # Deploy this separately or use Netlify
+  # - type: web
+  #   name: cloudctrl-frontend
+  #   runtime: static
+  #   region: oregon
+  #   plan: free
+  #   buildCommand: npm install && npm run build
+  #   staticPublishPath: ./dist
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: VITE_API_URL
+  #       value: https://multiclouddash.onrender.com
+  #     - key: VITE_GOOGLE_CLIENT_ID
+  #       value: 331703679009-7i3mdu35najtdgsg2bjolofnbk2ns6pm.apps.googleusercontent.com
+  #     - key: VITE_GOOGLE_REDIRECT_URI
+  #       value: https://multicloud-management-dashboard.onrender.com/auth/callback/google
+  #   routes:
+  #     - type: rewrite
+  #       source: /*
+  #       destination: /index.html

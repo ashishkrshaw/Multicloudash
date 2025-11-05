@@ -1,10 +1,33 @@
 import { Router } from "express";
-import { buildAssistantSnapshot } from "../services/assistant/context.js";
-import { generateAssistantResponse, type AssistantMessage } from "../services/assistant/perplexity.js";
+import { generateAssistantResponse, type AssistantMessage, type SimpleSnapshot } from "../services/assistant/perplexity.js";
 import { authenticateUser, optionalAuth } from "../middleware/auth.js";
 import { addChatMessage, getChatHistory, clearChatHistory } from "../utils/chatHistory.js";
 
 const assistantRouter = Router();
+
+// Simple context for AI - lightweight and fast
+const buildSimpleSnapshot = (): SimpleSnapshot => {
+  const now = new Date().toISOString();
+  return {
+    generatedAt: now,
+    contextSummary: `Development Mode - Limited telemetry available.
+    
+CloudCTRL Dashboard Status:
+- Environment: Development
+- Backend API: Running
+- Authentication: Active
+- Cloud Providers: AWS, Azure, GCP support enabled
+
+Available Features:
+- Cloud cost analysis and recommendations
+- Resource optimization suggestions
+- Security best practices guidance
+- Multi-cloud management advice
+- FinOps consulting
+
+Note: In development mode, I provide general cloud management guidance. For specific cost and resource data, please configure cloud credentials in the production environment.`,
+  };
+};
 
 const isAssistantMessageArray = (input: unknown): input is AssistantMessage[] => {
   if (!Array.isArray(input)) {
@@ -82,15 +105,8 @@ assistantRouter.post("/chat", optionalAuth, async (req, res) => {
       content: message.content.slice(0, 4000),
     }));
 
-    let snapshot;
-    try {
-      snapshot = await buildAssistantSnapshot();
-    } catch (snapshotError) {
-      console.error('[Assistant] Failed to build snapshot:', snapshotError);
-      return res.status(500).json({ 
-        error: "Failed to gather cloud data for context. Please try again." 
-      });
-    }
+    // Use simple snapshot for development - faster and doesn't hammer database
+    const snapshot = buildSimpleSnapshot();
     
     let completion;
     try {
@@ -126,6 +142,7 @@ assistantRouter.post("/chat", optionalAuth, async (req, res) => {
       model: completion.model,
       usage: completion.usage,
       snapshotGeneratedAt: snapshot.generatedAt,
+      mode: 'development',
     });
   } catch (error) {
     // Ensure we always return JSON even for unexpected errors

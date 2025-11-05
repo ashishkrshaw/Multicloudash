@@ -19,23 +19,19 @@ export interface GoogleUser {
  * Get the appropriate redirect URI based on environment
  */
 function getRedirectUri(): string {
-  // In development mode, always use localhost
-  const isDevelopment = import.meta.env.MODE === 'development' || 
-                       import.meta.env.DEV ||
-                       window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1';
+  // Always use the configured redirect URI
+  // This should match what's set in Google Cloud Console
+  const configuredUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
   
-  if (isDevelopment) {
-    // Use configured redirect URI for development (localhost)
-    const devUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:8081/auth/callback/google';
-    console.log('[GoogleAuth] Using development redirect URI:', devUri);
-    return devUri;
+  if (configuredUri) {
+    console.log('[GoogleAuth] Using configured redirect URI:', configuredUri);
+    return configuredUri;
   }
   
-  // In production, use the current origin
-  const prodUri = `${window.location.origin}/auth/callback/google`;
-  console.log('[GoogleAuth] Using production redirect URI:', prodUri);
-  return prodUri;
+  // Fallback to current origin
+  const fallbackUri = `${window.location.origin}/auth/callback/google`;
+  console.log('[GoogleAuth] Using fallback redirect URI:', fallbackUri);
+  return fallbackUri;
 }
 
 // Generate PKCE code verifier and challenge

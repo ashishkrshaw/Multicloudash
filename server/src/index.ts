@@ -8,6 +8,7 @@ import overviewRouter from "./routes/overview.js";
 import assistantRouter from "./routes/assistant.js";
 import credentialsRouter from "./routes/credentials.js";
 import testRouter from "./routes/test.js";
+import authRouter from "./routes/auth.js";
 import { corsOptions, securityHeaders, generalLimiter } from "./middleware/security.js";
 import { optionalAuth } from "./middleware/auth.js";
 
@@ -45,6 +46,7 @@ app.use("/api/overview", overviewRouter);
 app.use("/api/assistant", assistantRouter);
 app.use("/api/credentials", credentialsRouter);
 app.use("/api/test", testRouter);
+app.use("/auth", authRouter); // Google OAuth callback route
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ZodError) {
