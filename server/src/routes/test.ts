@@ -18,7 +18,7 @@ const router = Router();
 router.get('/auth', optionalAuth, async (req, res) => {
   try {
     if (req.userId) {
-      res.json({
+      return res.json({
         success: true,
         authenticated: true,
         userId: req.userId,
@@ -26,14 +26,18 @@ router.get('/auth', optionalAuth, async (req, res) => {
         provider: req.authProvider,
       });
     } else {
-      res.json({
+      return res.json({
         success: true,
         authenticated: false,
         message: 'No authentication token provided',
       });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Auth test failed' });
+    console.error('[Test] Auth test error:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Auth test failed' 
+    });
   }
 });
 
@@ -46,7 +50,7 @@ router.get('/credentials', authenticateUser, async (req, res) => {
     const userId = req.userId!;
     const credentials = await getCredentials(userId);
     
-    res.json({
+    return res.json({
       success: true,
       hasCredentials: !!credentials,
       providers: credentials ? {
@@ -56,7 +60,11 @@ router.get('/credentials', authenticateUser, async (req, res) => {
       } : null,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Credentials test failed' });
+    console.error('[Test] Credentials test error:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Credentials test failed' 
+    });
   }
 });
 
@@ -73,7 +81,7 @@ router.get('/cache', authenticateUser, async (req, res) => {
     const azureRefresh = getTimeUntilRefresh(userId, 'azure');
     const gcpRefresh = getTimeUntilRefresh(userId, 'gcp');
     
-    res.json({
+    return res.json({
       success: true,
       cacheStats: stats,
       nextRefresh: {
@@ -95,7 +103,11 @@ router.get('/cache', authenticateUser, async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Cache test failed' });
+    console.error('[Test] Cache test error:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Cache test failed' 
+    });
   }
 });
 
@@ -108,12 +120,16 @@ router.get('/chat-history', authenticateUser, async (req, res) => {
     const userId = req.userId!;
     const metadata = await getConversationMetadata(userId);
     
-    res.json({
+    return res.json({
       success: true,
       metadata,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Chat history test failed' });
+    console.error('[Test] Chat history test error:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Chat history test failed' 
+    });
   }
 });
 
@@ -150,7 +166,7 @@ router.get('/full', authenticateUser, async (req, res) => {
     // Check chat history
     const chatMetadata = await getConversationMetadata(userId);
     
-    res.json({
+    return res.json({
       success: true,
       timestamp: new Date().toISOString(),
       tests: {
@@ -162,7 +178,8 @@ router.get('/full', authenticateUser, async (req, res) => {
       overall: 'ALL SYSTEMS OPERATIONAL',
     });
   } catch (error) {
-    res.status(500).json({ 
+    console.error('[Test] Full system test error:', error);
+    return res.status(500).json({ 
       success: false,
       error: 'System test failed',
       details: error instanceof Error ? error.message : String(error),

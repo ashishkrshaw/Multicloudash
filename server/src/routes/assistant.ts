@@ -108,15 +108,40 @@ assistantRouter.post("/chat", optionalAuth, async (req, res) => {
     // Use simple snapshot for development - faster and doesn't hammer database
     const snapshot = buildSimpleSnapshot();
     
+    console.log('[Assistant] Processing chat request with', trimmedMessages.length, 'messages');
+    
     let completion;
     try {
       completion = await generateAssistantResponse(trimmedMessages, snapshot);
+      console.log('[Assistant] Successfully generated response');
     } catch (aiError) {
-      // Handle AI API errors gracefully
+      // Handle AI API errors gracefully with fallback response
       const errorMessage = aiError instanceof Error ? aiError.message : "AI service unavailable";
       console.error('[Assistant] AI generation failed:', errorMessage);
-      return res.status(503).json({ 
-        error: `Unable to generate response: ${errorMessage}` 
+      
+      // Return a fallback response instead of error (better UX)
+      const lastUserMessage = trimmedMessages.filter(m => m.role === 'user').pop();
+      const fallbackReply = `I'm currently experiencing technical difficulties connecting to the AI service. ${
+        errorMessage.includes('API key') 
+          ? 'Please ensure the AI_API_KEY is configured in your environment variables.' 
+          : 'Please try again in a moment.'
+      }
+
+Meanwhile, I'm here to help with:
+• Cloud cost optimization strategies
+• AWS, Azure, and GCP best practices
+• Resource management advice
+• Security recommendations
+
+Your question: "${lastUserMessage?.content.substring(0, 100)}..."`;
+
+      return res.status(200).json({
+        reply: fallbackReply,
+        model: 'fallback',
+        usage: { totalTokens: 0 },
+        snapshotGeneratedAt: snapshot.generatedAt,
+        mode: 'fallback',
+        warning: 'AI service unavailable - showing fallback response'
       });
     }
 
@@ -153,6 +178,23 @@ assistantRouter.post("/chat", optionalAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/assistant/health
+ * Health check for assistant service
+ */
+assistantRouter.get("/health", async (req, res) => {
+  const apiKey = process.env.AI_API_KEY;
+  const apiConfigured = apiKey && apiKey !== '' && apiKey !== 'pplx-your-api-key-here';
+  
+  return res.json({
+    status: 'ok',
+    service: 'assistant',
+    aiConfigured: apiConfigured,
+    endpoints: ['/chat', '/history'],
+    mode: 'development'
+  });
+});
+
+/**
  * GET /api/assistant/history
  * Get user's chat history
  */
@@ -163,13 +205,17 @@ assistantRouter.get("/history", authenticateUser, async (req, res, next) => {
     
     const history = await getChatHistory(userId, limit);
     
-    res.json({
+    return res.json({
       success: true,
       history,
       count: history.length,
     });
   } catch (error) {
-    next(error);
+    console.error('[Assistant] Get history error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to retrieve chat history',
+      success: false 
+    });
   }
 });
 
@@ -183,12 +229,16 @@ assistantRouter.delete("/history", authenticateUser, async (req, res, next) => {
     
     await clearChatHistory(userId);
     
-    res.json({
+    return res.json({
       success: true,
       message: "Chat history cleared",
     });
   } catch (error) {
-    next(error);
+    console.error('[Assistant] Clear history error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to clear chat history',
+      success: false 
+    });
   }
 });
 

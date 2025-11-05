@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -6,6 +6,7 @@ import { CostChart } from "@/components/dashboard/CostChart";
 import { ResourceTable } from "@/components/dashboard/ResourceTable";
 import { UsageBreakdown } from "@/components/dashboard/UsageBreakdown";
 import { MockDataBadge } from "@/components/ui/mock-data-badge";
+import { handleOAuthCallback } from "@/lib/auth/google";
 import {
   DollarSign,
   Server,
@@ -174,6 +175,25 @@ const Index = () => {
   const { format: formatCurrency, convert, currency: selectedCurrency } = useCurrency();
   const overviewQuery = useUnifiedOverview();
   const overview = overviewQuery.data;
+
+  // Handle OAuth callback from backend
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('token') || params.has('error')) {
+      handleOAuthCallback()
+        .then((user) => {
+          if (user) {
+            // Remove query params and reload to show logged-in state
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.reload();
+          }
+        })
+        .catch((error) => {
+          console.error('OAuth error:', error);
+          // Could show a toast notification here
+        });
+    }
+  }, []);
   const awsCostSummary = useAwsCostSummary({ granularity: "MONTHLY" });
 
   const awsCurrency = awsCostSummary.data?.total.currency ?? "USD";

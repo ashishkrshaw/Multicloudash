@@ -29,8 +29,7 @@ router.post('/', authenticateUser, async (req, res) => {
 
     // Validate that at least one credential is provided
     if (!aws && !azure && !gcp) {
-      res.status(400).json({ error: 'At least one cloud credential is required' });
-      return;
+      return res.status(400).json({ error: 'At least one cloud credential is required' });
     }
 
     // Validate format (should be base64 strings)
@@ -43,18 +42,15 @@ router.post('/', authenticateUser, async (req, res) => {
     };
 
     if (aws && !validateBase64(aws)) {
-      res.status(400).json({ error: 'Invalid AWS credential format' });
-      return;
+      return res.status(400).json({ error: 'Invalid AWS credential format' });
     }
 
     if (azure && !validateBase64(azure)) {
-      res.status(400).json({ error: 'Invalid Azure credential format' });
-      return;
+      return res.status(400).json({ error: 'Invalid Azure credential format' });
     }
 
     if (gcp && !validateBase64(gcp)) {
-      res.status(400).json({ error: 'Invalid GCP credential format' });
-      return;
+      return res.status(400).json({ error: 'Invalid GCP credential format' });
     }
 
     // Store encrypted credentials
@@ -62,7 +58,7 @@ router.post('/', authenticateUser, async (req, res) => {
 
     console.log(`[Credentials] Stored for user ${req.userEmail} (${userId})`);
     
-    res.json({
+    return res.json({
       success: true,
       message: 'Credentials stored successfully',
       providers: {
@@ -73,7 +69,7 @@ router.post('/', authenticateUser, async (req, res) => {
     });
   } catch (error) {
     console.error('[Credentials] Store error:', error);
-    res.status(500).json({ error: 'Failed to store credentials' });
+    return res.status(500).json({ error: 'Failed to store credentials' });
   }
 });
 
@@ -88,15 +84,14 @@ router.get('/', authenticateUser, async (req, res) => {
     const credentials = await getCredentials(userId);
     
     if (!credentials) {
-      res.json({
+      return res.json({
         success: true,
         credentials: null,
         hasCredentials: false,
       });
-      return;
     }
 
-    res.json({
+    return res.json({
       success: true,
       credentials,
       hasCredentials: true,
@@ -108,7 +103,7 @@ router.get('/', authenticateUser, async (req, res) => {
     });
   } catch (error) {
     console.error('[Credentials] Get error:', error);
-    res.status(500).json({ error: 'Failed to retrieve credentials' });
+    return res.status(500).json({ error: 'Failed to retrieve credentials' });
   }
 });
 
@@ -122,14 +117,12 @@ router.delete('/:provider', authenticateUser, async (req, res) => {
     const { provider } = req.params;
 
     if (!['aws', 'azure', 'gcp'].includes(provider)) {
-      res.status(400).json({ error: 'Invalid provider' });
-      return;
+      return res.status(400).json({ error: 'Invalid provider' });
     }
 
     const credentials = await getCredentials(userId);
     if (!credentials) {
-      res.status(404).json({ error: 'No credentials found' });
-      return;
+      return res.status(404).json({ error: 'No credentials found' });
     }
 
     // Remove specific provider
@@ -145,13 +138,13 @@ router.delete('/:provider', authenticateUser, async (req, res) => {
 
     console.log(`[Credentials] Deleted ${provider} for user ${req.userEmail}`);
 
-    res.json({
+    return res.json({
       success: true,
       message: `${provider.toUpperCase()} credentials deleted`,
     });
   } catch (error) {
     console.error('[Credentials] Delete error:', error);
-    res.status(500).json({ error: 'Failed to delete credentials' });
+    return res.status(500).json({ error: 'Failed to delete credentials' });
   }
 });
 
@@ -166,19 +159,18 @@ router.delete('/', authenticateUser, async (req, res) => {
     const deleted = await deleteCredentials(userId);
     
     if (!deleted) {
-      res.status(404).json({ error: 'No credentials found' });
-      return;
+      return res.status(404).json({ error: 'No credentials found' });
     }
 
     console.log(`[Credentials] Deleted all for user ${req.userEmail}`);
 
-    res.json({
+    return res.json({
       success: true,
       message: 'All credentials deleted',
     });
   } catch (error) {
     console.error('[Credentials] Delete all error:', error);
-    res.status(500).json({ error: 'Failed to delete credentials' });
+    return res.status(500).json({ error: 'Failed to delete credentials' });
   }
 });
 
@@ -191,13 +183,13 @@ router.get('/status', authenticateUser, async (req, res) => {
     const userId = req.userId!;
     const has = await hasCredentials(userId);
     
-    res.json({
+    return res.json({
       success: true,
       hasCredentials: has,
     });
   } catch (error) {
     console.error('[Credentials] Status error:', error);
-    res.status(500).json({ error: 'Failed to check credentials' });
+    return res.status(500).json({ error: 'Failed to check credentials' });
   }
 });
 

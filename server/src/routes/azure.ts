@@ -18,23 +18,41 @@ const vmPathSchema = z.object({
 
 const vmActionSchema = z.enum(["start", "restart", "poweroff", "deallocate"]);
 
-azureRouter.get("/overview", async (req, res, next) => {
+azureRouter.get("/overview", async (req, res) => {
   try {
     const userId = (req as any).userId;
+    console.log('[Azure] Fetching overview', userId ? `for user ${userId}` : '(no auth)');
     const overview = await getAzureOverview(userId);
-    res.json(overview);
+    console.log('[Azure] Success');
+    return res.json(overview);
   } catch (error) {
-    next(error);
+    console.error('[Azure] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch Azure overview';
+    return res.status(500).json({ 
+      error: errorMessage,
+      cost: null,
+      compute: null,
+      storage: null,
+      insights: [],
+      errors: [{ section: 'overview', message: errorMessage }]
+    });
   }
 });
 
-azureRouter.get("/compute/virtual-machines", async (req, res, next) => {
+azureRouter.get("/compute/virtual-machines", async (req, res) => {
   try {
     const userId = (req as any).userId;
+    console.log('[Azure] Fetching VMs', userId ? `for user ${userId}` : '(no auth)');
     const vms = await listVirtualMachines(userId);
-    res.json({ vms });
+    console.log('[Azure] Found', vms?.length || 0, 'VMs');
+    return res.json({ vms });
   } catch (error) {
-    next(error);
+    console.error('[Azure] VM list error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to list VMs';
+    return res.status(500).json({ 
+      error: errorMessage,
+      vms: []
+    });
   }
 });
 
@@ -63,7 +81,7 @@ azureRouter.post("/compute/virtual-machines/:resourceGroup/:vmName/:action", asy
     };
 
     const vm = await performAction();
-    res.json({ vm });
+    return res.json({ vm });
   } catch (error) {
     next(error);
   }

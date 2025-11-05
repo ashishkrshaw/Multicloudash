@@ -275,12 +275,14 @@ export const generateAssistantResponse = async (
 ): Promise<AssistantCompletion> => {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) {
+    console.error('[Perplexity] AI_API_KEY is not configured');
     throw new Error("AI_API_KEY is not configured");
   }
 
   console.log('[Perplexity] Generating response with model:', process.env.AI_MODEL || 'sonar-pro');
   console.log('[Perplexity] API URL:', API_URL);
-  console.log('[Perplexity] API Key present:', apiKey ? 'Yes (length: ' + apiKey.length + ')' : 'No');
+  console.log('[Perplexity] API Key present:', 'Yes (length: ' + apiKey.length + ')');
+  console.log('[Perplexity] Message count:', messages.length);
 
   const systemPrompt = `You are CloudCTRL Copilot, a sharp cloud FinOps expert. Keep it brief and punchy.
 
