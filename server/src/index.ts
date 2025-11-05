@@ -17,6 +17,10 @@ const app = express();
 // This allows Express to properly handle X-Forwarded-For headers from the Render proxy
 app.set('trust proxy', 1);
 
+// Log startup mode
+const mode = process.env.NODE_ENV || 'development';
+console.log(`🚀 Starting CloudCTRL API in ${mode.toUpperCase()} mode`);
+
 // Security middleware (must be first)
 app.use(corsOptions);
 app.use(securityHeaders);

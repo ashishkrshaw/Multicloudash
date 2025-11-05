@@ -19,16 +19,23 @@ export interface GoogleUser {
  * Get the appropriate redirect URI based on environment
  */
 function getRedirectUri(): string {
-  // Check if we're in production (deployed)
-  const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  // In development mode, always use localhost
+  const isDevelopment = import.meta.env.MODE === 'development' || 
+                       import.meta.env.DEV ||
+                       window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1';
   
-  if (isProduction) {
-    // Use the current origin + callback path for production
-    return `${window.location.origin}/auth/callback/google`;
+  if (isDevelopment) {
+    // Use configured redirect URI for development (localhost)
+    const devUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:8081/auth/callback/google';
+    console.log('[GoogleAuth] Using development redirect URI:', devUri);
+    return devUri;
   }
   
-  // Use configured redirect URI for development
-  return import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback/google`;
+  // In production, use the current origin
+  const prodUri = `${window.location.origin}/auth/callback/google`;
+  console.log('[GoogleAuth] Using production redirect URI:', prodUri);
+  return prodUri;
 }
 
 // Generate PKCE code verifier and challenge

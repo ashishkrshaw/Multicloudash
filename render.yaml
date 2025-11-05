@@ -1,0 +1,41 @@
+# Render Configuration for CloudCTRL
+
+services:
+  # Backend API Server
+  - type: web
+    name: cloudctrl-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: PORT
+        value: 4000
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: sonar-pro
+    healthCheckPath: /api/health
+
+  # Frontend Static Site
+  - type: web
+    name: cloudctrl-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build:dev
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: VITE_API_URL
+        value: https://cloudctrl-api.onrender.com
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,0 +1,21 @@
+# Netlify Configuration for CloudCTRL
+
+[build]
+  # Build command
+  command = "npm run build:dev"
+  # Directory with the static files
+  publish = "dist"
+
+# Redirect all routes to index.html for client-side routing (SPA)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Development environment variables (override in Netlify UI for production)
+[context.production.environment]
+  NODE_ENV = "development"
+  VITE_API_URL = "https://your-backend.onrender.com"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "development"
